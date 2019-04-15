@@ -16,31 +16,43 @@
 
 import time
 import sys
+import md5
 
 ################################################################################
 
 #global vars here
 DEBUG = True
 
+customSystemTime = True
+
 
 
 ################################################################################
 
 #functions here
+def get_hex():
+	epochIn = sys.stdin.read().strip('\n')
+	epochTime = time.strptime(epochIn, "%Y %m %d %H %M %S")
+	temp = time.mktime(epochTime)
+	a = int(temp)
+	if (customSystemTime):
+		systemtime = "2013 05 06 07 43 25"
+		bconv = time.strptime(systemtime, "%Y %m %d %H %M %S")
+		temp2 = time.mktime(bconv)
+		b = int(temp2)
+	else:
+		#for non custom system time
+		pass
 
+	c = b-a
+	d = c %60
+	correctDifference = c - d
+	convertToHex = str(correctDifference)
+	temp3 = md5.new(convertToHex).hexdigest()
+	code = md5.new(temp3).hexdigest()
+	print code
 
-
+def get_code():
+	pass
 ###############################MAIN#############################################
-
-#get epoch from stdin
-epochIn = sys.stdin.read().strip('\n')
-print(epochIn)
-
-#epochTime = time.struct_time(tm_year=epochIn[0], tm_mon=epochIn[1], tm_mday=epochIn[2], tm_hour=epochIn[3], tm_min=epochIn[4], tm_sec=epochIn[5])
-epochTime = time.strptime(epochIn, "%Y %m %d %H %M %S")
-
-print(epochTime)
-a = time.mktime(epochTime)
-utcEpoch = time.gmtime(a)
-
-print(newh)
+get_hex()
