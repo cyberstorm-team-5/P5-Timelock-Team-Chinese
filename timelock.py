@@ -12,8 +12,6 @@
 #              system's current time to calculate and output a 4-character code.
 ################################################################################
 
-######CONVERT TO UTC TIME TO MAKE DAYLIGHT SAVINGS WORK
-
 import time
 import sys
 import md5
@@ -21,49 +19,87 @@ import hashlib
 
 ################################################################################
 
-#global vars here
 DEBUG = True
 
-customSystemTime = True
+#determine if to use custom system time and, if so, what it should be
+useCustomSysTime = True
+valueCustomSysTime = "2015 05 15 14 00 00"
+
+#how long (in seconds) a code would be valid for
+secondsValid = 60
+
 
 ################################################################################
-code = ""
-alpha = ""
-nums = ""
-#functions here
-def get_hex():
-	epochIn = sys.stdin.read().strip('\n')
-	epochTime = time.strptime(epochIn, "%Y %m %d %H %M %S")
-	temp = time.mktime(epochTime)
-	a = int(temp)
-	if (customSystemTime):
-		systemtime = "2015 01 01 00 01 30"
-		bconv = time.strptime(systemtime, "%Y %m %d %H %M %S")
-		temp2 = time.mktime(bconv)
-		b = int(temp2)
+
+#convert a time string (formatted YYYY MM DD HH mm SS) into UTC
+def toUTC(timeString):
+        #convert string into time struct, then convert the struct to
+        #UTC time since epoch to return
+        timeStruct = time.strptime(timeString, "%Y %m %d %H %M %S")
+        return int(time.mktime(timeStruct))
+
+
+#retrieve the hex value to use for retrieving the code
+def getHex():
+        
+	#retrieve time from stdin and convert it to UTC
+	epochTime = toUTC(sys.stdin.read().strip('\n'))
+
+	#determine whether to use custom or real system time
+	if (useCustomSysTime):
+                #retrieve global for custom system time and convert it to UTC
+		systemTime = toUTC(valueCustomSysTime)
+		
 	else:
 		#for non custom system time
 		pass
 
-	c = b-a
-	d = c %60
-	correctDifference = c - d
-	convertToHex = str(correctDifference)
-	temp3 = md5.new(convertToHex).hexdigest()
-	global code
-	code += md5.new(temp3).hexdigest()
+        #compute unadjusted time elapsed
+	timeElapsed = systemTime - epochTime
+	#adjust time elapsed based on how long (in seconds) the code is valid for
+	timeElapsedAdjustment = timeElapsed % secondsValid
 
-def get_code():
-        for i in code:
-                if (i.isalpha() == True):
-                        global alpha
+	#get the true (adjusted) time elapsed converted to hex with md5
+	#to return for retrieving the code
+	trueTimeElapsed = str(timeElapsed - timeElapsedAdjustment)
+	return (md5.new(md5.new(trueTimeElapsed).hexdigest()).hexdigest())
+
+
+#use a hex string to retrieve the secret code (first two letters a-f from left
+#to right and first two numbers 0-9 from right to left)
+def getCode(hexString):
+        #show full hexstring for debugging
+        if(DEBUG):
+                print(hexString)
+        
+        #setup strings for holding the letters and numbers found in the hex
+        alpha = ""
+        nums = ""
+
+        #retrieve the first 4 letters from left to right
+        for i in hexString:
+
+                #append the letter found to the end of the alpha string
+                if (i.isalpha()):
                         alpha += i
-                else:
-                        global nums
-                        nums += i
-        global Code
-        Code = alpha[:2] + nums[-1] + nums[-2]
-        print Code
+                        
+                        #once four letters are found, no longer need anymore
+                        if(len(alpha) >= 4):
+                                break
+                        
+        #retrieve the first 4 numbers from right to left
+        for i in range(len(hexString)-1, -1, -1):
+                
+                #append the number found to the end of the nums string
+                if (not hexString[i].isalpha()):
+                        nums += hexString[i]
+                        
+                        #once four numbers are found, no longer need anymore
+                        if(len(nums) >= 4):
+                                break
+
+        ###########need to change to handle if not two nums or two letters
+        code = alpha[:2] + nums[:2]
+        print code
 ###############################MAIN#############################################
-get_hex()
-get_code()
+getCode(getHex())
