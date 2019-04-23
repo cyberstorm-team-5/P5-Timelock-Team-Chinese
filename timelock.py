@@ -13,17 +13,17 @@
 ################################################################################
 
 import time
+import datetime
 import sys
 import md5
-import hashlib
 
 ################################################################################
 
 DEBUG = True
 
 #determine if to use custom system time and, if so, what it should be
-useCustomSysTime = True
-valueCustomSysTime = "2015 05 15 14 00 00"
+useCustomSysTime = False
+valueCustomSysTime = "2015 01 01 00 01 00"
 
 #how long (in seconds) a code would be valid for
 secondsValid = 60
@@ -51,8 +51,11 @@ def getHex():
 		systemTime = toUTC(valueCustomSysTime)
 		
 	else:
-		#for non custom system time
-		pass
+		#for non custom system time, get the dateTime and retrieve the necessary data
+                #from it, formatted "YYYY MM DD HH mm SS" for consistency
+		dateTime = datetime.datetime.now()
+		systemTime = toUTC("{} {} {} {} {} {}".format(dateTime.year, dateTime.month, \
+                                dateTime.day, dateTime.hour, dateTime.minute, dateTime.second))
 
         #compute unadjusted time elapsed
 	timeElapsed = systemTime - epochTime
@@ -98,8 +101,29 @@ def getCode(hexString):
                         if(len(nums) >= 4):
                                 break
 
-        ###########need to change to handle if not two nums or two letters
-        code = alpha[:2] + nums[:2]
+        #retrieve the four digit code, handling special cases of not having enough
+        #digits or letters retrieved from the hex string
+        if(len(alpha) >= 2 and len(nums) >= 2):
+                #no special case needed
+                code = alpha[:2] + nums[:2]
+
+        elif(len(alpha) < 2):
+                #combine all of the letters and numbers in the string, removing an
+                #extra number from the end if there is one (index 5 if len(alpha) == 1)
+                code = alpha + nums
+                code[:4]
+                
+        else:
+                #not enough numbers, so either use three letters if there is one number,
+                #or all letter if no numbers
+                if(len(nums) == 1):
+                        code = alpha[:3] + nums
+                else:
+                        code = alpha
+
+        #send resulting 4-digit code to stdout
         print code
+
+
 ###############################MAIN#############################################
 getCode(getHex())
