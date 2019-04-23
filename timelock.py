@@ -12,58 +12,118 @@
 #              system's current time to calculate and output a 4-character code.
 ################################################################################
 
-######CONVERT TO UTC TIME TO MAKE DAYLIGHT SAVINGS WORK
-
 import time
+import datetime
 import sys
 import md5
-import hashlib
 
 ################################################################################
 
-#global vars here
 DEBUG = True
 
-customSystemTime = True
+#determine if to use custom system time and, if so, what it should be
+useCustomSysTime = False
+valueCustomSysTime = "2015 01 01 00 01 00"
+
+#how long (in seconds) a code would be valid for
+secondsValid = 60
+
 
 ################################################################################
-code = ""
-alpha = ""
-nums = ""
-#functions here
-def get_hex():
-	epochIn = sys.stdin.read().strip('\n')
-	epochTime = time.strptime(epochIn, "%Y %m %d %H %M %S")
-	temp = time.mktime(epochTime)
-	a = int(temp)
-	if (customSystemTime):
-		systemtime = "2015 01 01 00 01 30"
-		bconv = time.strptime(systemtime, "%Y %m %d %H %M %S")
-		temp2 = time.mktime(bconv)
-		b = int(temp2)
+
+#convert a time string (formatted YYYY MM DD HH mm SS) into UTC
+def toUTC(timeString):
+        #convert string into time struct, then convert the struct to
+        #UTC time since epoch to return
+        timeStruct = time.strptime(timeString, "%Y %m %d %H %M %S")
+        return int(time.mktime(timeStruct))
+
+
+#retrieve the hex value to use for retrieving the code
+def getHex():
+        
+	#retrieve time from stdin and convert it to UTC
+	epochTime = toUTC(sys.stdin.read().strip('\n'))
+
+	#determine whether to use custom or real system time
+	if (useCustomSysTime):
+                #retrieve global for custom system time and convert it to UTC
+		systemTime = toUTC(valueCustomSysTime)
+		
 	else:
-		#for non custom system time
-		pass
+		#for non custom system time, get the dateTime and retrieve the necessary data
+                #from it, formatted "YYYY MM DD HH mm SS" for consistency
+		dateTime = datetime.datetime.now()
+		systemTime = toUTC("{} {} {} {} {} {}".format(dateTime.year, dateTime.month, \
+                                dateTime.day, dateTime.hour, dateTime.minute, dateTime.second))
 
-	c = b-a
-	d = c %60
-	correctDifference = c - d
-	convertToHex = str(correctDifference)
-	temp3 = md5.new(convertToHex).hexdigest()
-	global code
-	code += md5.new(temp3).hexdigest()
+        #compute unadjusted time elapsed
+	timeElapsed = systemTime - epochTime
+	#adjust time elapsed based on how long (in seconds) the code is valid for
+	timeElapsedAdjustment = timeElapsed % secondsValid
 
-def get_code():
-        for i in code:
-                if (i.isalpha() == True):
-                        global alpha
+	#get the true (adjusted) time elapsed converted to hex with md5
+	#to return for retrieving the code
+	trueTimeElapsed = str(timeElapsed - timeElapsedAdjustment)
+	return (md5.new(md5.new(trueTimeElapsed).hexdigest()).hexdigest())
+
+
+#use a hex string to retrieve the secret code (first two letters a-f from left
+#to right and first two numbers 0-9 from right to left)
+def getCode(hexString):
+        #show full hexstring for debugging
+        if(DEBUG):
+                print(hexString)
+        
+        #setup strings for holding the letters and numbers found in the hex
+        alpha = ""
+        nums = ""
+
+        #retrieve the first 4 letters from left to right
+        for i in hexString:
+
+                #append the letter found to the end of the alpha string
+                if (i.isalpha()):
                         alpha += i
+                        
+                        #once four letters are found, no longer need anymore
+                        if(len(alpha) >= 4):
+                                break
+                        
+        #retrieve the first 4 numbers from right to left
+        for i in range(len(hexString)-1, -1, -1):
+                
+                #append the number found to the end of the nums string
+                if (not hexString[i].isalpha()):
+                        nums += hexString[i]
+                        
+                        #once four numbers are found, no longer need anymore
+                        if(len(nums) >= 4):
+                                break
+
+        #retrieve the four digit code, handling special cases of not having enough
+        #digits or letters retrieved from the hex string
+        if(len(alpha) >= 2 and len(nums) >= 2):
+                #no special case needed
+                code = alpha[:2] + nums[:2]
+
+        elif(len(alpha) < 2):
+                #combine all of the letters and numbers in the string, removing an
+                #extra number from the end if there is one (index 5 if len(alpha) == 1)
+                code = alpha + nums
+                code[:4]
+                
+        else:
+                #not enough numbers, so either use three letters if there is one number,
+                #or all letter if no numbers
+                if(len(nums) == 1):
+                        code = alpha[:3] + nums
                 else:
-                        global nums
-                        nums += i
-        global Code
-        Code = alpha[:2] + nums[-1] + nums[-2]
-        print Code
+                        code = alpha
+
+        #send resulting 4-digit code to stdout
+        print code
+
+
 ###############################MAIN#############################################
-get_hex()
-get_code()
+getCode(getHex())
