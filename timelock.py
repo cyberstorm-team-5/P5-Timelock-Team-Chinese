@@ -17,6 +17,7 @@
 import time
 import sys
 import md5
+import hashlib
 
 ################################################################################
 
@@ -25,10 +26,10 @@ DEBUG = True
 
 customSystemTime = True
 
-
-
 ################################################################################
-
+code = ""
+alpha = ""
+nums = ""
 #functions here
 def get_hex():
 	epochIn = sys.stdin.read().strip('\n')
@@ -36,7 +37,7 @@ def get_hex():
 	temp = time.mktime(epochTime)
 	a = int(temp)
 	if (customSystemTime):
-		systemtime = "2013 05 06 07 43 25"
+		systemtime = "2015 01 01 00 01 30"
 		bconv = time.strptime(systemtime, "%Y %m %d %H %M %S")
 		temp2 = time.mktime(bconv)
 		b = int(temp2)
@@ -49,10 +50,20 @@ def get_hex():
 	correctDifference = c - d
 	convertToHex = str(correctDifference)
 	temp3 = md5.new(convertToHex).hexdigest()
-	code = md5.new(temp3).hexdigest()
-	print code
+	global code
+	code += md5.new(temp3).hexdigest()
 
 def get_code():
-	pass
+        for i in code:
+                if (i.isalpha() == True):
+                        global alpha
+                        alpha += i
+                else:
+                        global nums
+                        nums += i
+        global Code
+        Code = alpha[:2] + nums[-1] + nums[-2]
+        print Code
 ###############################MAIN#############################################
 get_hex()
+get_code()
